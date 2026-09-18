@@ -1,6 +1,7 @@
 package com.trustmarket.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -10,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -22,7 +24,11 @@ import com.trustmarket.app.ui.components.RiskBadge
 private val TrustTeal = Color(0xFF1F4E5F)
 
 @Composable
-fun MarketplaceHomeScreen(token: String?) {
+fun MarketplaceHomeScreen(
+    @Suppress("UNUSED_PARAMETER") token: String?,
+    onNavigateToProfile: () -> Unit,
+    onViewTrustProfile: (Int) -> Unit
+) {
     var products by remember { mutableStateOf<List<ProductOut>>(emptyList()) }
     var categories by remember { mutableStateOf<List<CategoryOut>>(emptyList()) }
     var searchQuery by remember { mutableStateOf("") }
@@ -57,7 +63,10 @@ fun MarketplaceHomeScreen(token: String?) {
                 placeholder = { Text("Search listings...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color.White, focusedContainerColor = Color.White),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedContainerColor = Color.White,
+                    focusedContainerColor = Color.White
+                ),
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -72,9 +81,15 @@ fun MarketplaceHomeScreen(token: String?) {
         }
 
         when {
-            loading -> Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) { CircularProgressIndicator() }
-            error != null -> Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) { Text(error!!, color = MaterialTheme.colorScheme.error) }
-            filtered.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) { Text("No products found") }
+            loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+            error != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(error!!, color = MaterialTheme.colorScheme.error)
+            }
+            filtered.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("No products found")
+            }
             else -> LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 contentPadding = PaddingValues(12.dp),
@@ -82,7 +97,9 @@ fun MarketplaceHomeScreen(token: String?) {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.weight(1f)
             ) {
-                items(filtered) { product -> ProductCard(product) }
+                items(filtered) { product ->
+                    ProductCard(product = product, onViewTrustProfile = onViewTrustProfile)
+                }
             }
         }
 
@@ -91,13 +108,14 @@ fun MarketplaceHomeScreen(token: String?) {
             NavigationBarItem(selected = false, onClick = {}, icon = { Text("🛒") }, label = { Text("Purchases") })
             NavigationBarItem(selected = false, onClick = {}, icon = { Text("🏬") }, label = { Text("My Shop") })
             NavigationBarItem(selected = false, onClick = {}, icon = { Text("🚩") }, label = { Text("Disputes") })
-            NavigationBarItem(selected = false, onClick = {}, icon = { Text("👤") }, label = { Text("Profile") })
+            NavigationBarItem(selected = false, onClick = onNavigateToProfile, icon = { Text("👤") }, label = { Text("Profile") })
         }
     }
 }
 
+@Suppress("UNUSED_VARIABLE", "UNUSED_PARAMETER")
 @Composable
-private fun ProductCard(product: ProductOut) {
+private fun ProductCard(product: ProductOut, onViewTrustProfile: (Int) -> Unit) {
     var trust by remember { mutableStateOf<Pair<String, Int>?>(null) }
 
     LaunchedEffect(product.seller_id) {
@@ -109,7 +127,10 @@ private fun ProductCard(product: ProductOut) {
         }
     }
 
-    Card(shape = RoundedCornerShape(12.dp)) {
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.clickable { onViewTrustProfile(product.seller_id) }
+    ) {
         Column(modifier = Modifier.padding(8.dp)) {
             Box(
                 modifier = Modifier
