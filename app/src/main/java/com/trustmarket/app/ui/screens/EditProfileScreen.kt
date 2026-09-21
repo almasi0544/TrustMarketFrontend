@@ -10,6 +10,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.trustmarket.app.network.ProfileUpdateRequest
 import com.trustmarket.app.network.RetrofitClient
+import com.trustmarket.app.network.friendlyErrorMessage
 import kotlinx.coroutines.launch
 
 private val TrustTeal = Color(0xFF1F4E5F)
@@ -33,7 +34,7 @@ fun EditProfileScreen(token: String?, onSaved: () -> Unit) {
             bio = profile.bio ?: ""
             location = profile.location ?: ""
         } catch (e: Exception) {
-            error = "Failed to load: ${e.message}"
+            error = friendlyErrorMessage(e)
         }
     }
 
@@ -65,12 +66,12 @@ fun EditProfileScreen(token: String?, onSaved: () -> Unit) {
                     scope.launch {
                         try {
                             RetrofitClient.api.updateMyProfile(
-                                "Bearer $token",
-                                ProfileUpdateRequest(fullName, username, bio, location)
+                                ProfileUpdateRequest(fullName, username, bio, location),
+                                "Bearer $token"
                             )
                             onSaved()
                         } catch (e: Exception) {
-                            error = "Save failed: ${e.message}"
+                            error = friendlyErrorMessage(e)
                         } finally {
                             loading = false
                         }

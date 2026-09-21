@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import com.trustmarket.app.network.RegisterRequest
 import com.trustmarket.app.network.RetrofitClient
 import kotlinx.coroutines.launch
+import com.trustmarket.app.network.friendlyErrorMessage
 
 private val TrustTeal = Color(0xFF1F4E5F)
 
@@ -85,7 +86,7 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit, onGoToLogin: () -> Unit) {
                             RetrofitClient.api.register(RegisterRequest(email, password))
                             onRegisterSuccess()
                         } catch (e: Exception) {
-                            error = "Registration failed: ${e.message}"
+                            error = friendlyErrorMessage(e)
                         } finally {
                             loading = false
                         }

@@ -2,21 +2,12 @@ package com.trustmarket.app
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.*
-import com.trustmarket.app.ui.screens.LoginScreen
-import com.trustmarket.app.ui.screens.MarketplaceHomeScreen
-import com.trustmarket.app.ui.screens.RegisterScreen
-import com.trustmarket.app.ui.screens.TrustMarketHome
+import com.trustmarket.app.ui.screens.*
 import com.trustmarket.app.ui.theme.TrustMarketTheme
-import com.trustmarket.app.ui.screens.ProfileScreen
-import com.trustmarket.app.ui.screens.EditProfileScreen
-import com.trustmarket.app.ui.screens.TrustProfileScreen
-import com.trustmarket.app.ui.screens.ReportSellerScreen
-import com.trustmarket.app.ui.screens.CreateDisputeScreen
-import com.trustmarket.app.ui.screens.MyDisputesScreen
-import com.trustmarket.app.ui.screens.VerificationScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,70 +23,151 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AppRoot() {
-    var screen by remember { mutableStateOf("home") }
+    var backStack by remember { mutableStateOf(listOf("home")) }
+    val screen = backStack.last()
+
+    fun navigate(to: String) { backStack = backStack + to }
+    fun goBack() { if (backStack.size > 1) backStack = backStack.dropLast(1) }
+    fun resetTo(newRoot: String) { backStack = listOf(newRoot) }
+    fun replaceLastTwoWith(target: String) {
+        backStack = backStack.dropLast(2).ifEmpty { listOf("marketplace") } + target
+    }
+
+    BackHandler(enabled = backStack.size > 1) { goBack() }
+
     var authToken by remember { mutableStateOf<String?>(null) }
     var selectedSellerId by remember { mutableStateOf<Int?>(null) }
     var selectedTransactionId by remember { mutableStateOf<Int?>(null) }
+    var selectedProductId by remember { mutableStateOf<Int?>(null) }
+    var editingProductId by remember { mutableStateOf<Int?>(null) }
 
     when (screen) {
-        "home" -> TrustMarketHome(onGetStarted = { screen = "login" })
+        "home" -> TrustMarketHome(onGetStarted = { navigate("login") })
+
         "login" -> LoginScreen(
-            onLoginSuccess = { token ->
-                authToken = token
-                screen = "marketplace"
-            },
-            onGoToRegister = { screen = "register" }
+            onLoginSuccess = { token -> authToken = token; resetTo("marketplace") },
+            onGoToRegister = { navigate("register") }
         )
+
         "register" -> RegisterScreen(
-            onRegisterSuccess = { screen = "login" },
-            onGoToLogin = { screen = "login" }
+            onRegisterSuccess = { goBack() },
+            onGoToLogin = { goBack() }
         )
+
         "profile" -> ProfileScreen(
             token = authToken,
-            onEdit = { screen = "edit_profile" },
-            onViewDisputes = { screen = "my_disputes" },
-            onViewVerification = { screen = "verification" }
+            onEdit = { navigate("edit_profile") },
+            onViewDisputes = { navigate("my_disputes") },
+            onViewVerification = { navigate("verification") },
+            onViewTrustProfile = { sellerId -> selectedSellerId = sellerId; navigate("trust_profile") },
+            onSignOut = { authToken = null; resetTo("login") }
         )
-        "edit_profile" -> EditProfileScreen(token = authToken, onSaved = { screen = "profile" })
+
+        "edit_profile" -> EditProfileScreen(token = authToken, onSaved = { goBack() })
+
         "marketplace" -> MarketplaceHomeScreen(
             token = authToken,
-            onNavigateToProfile = { screen = "profile" },
-            onViewTrustProfile = { sellerId -> selectedSellerId = sellerId; screen = "trust_profile" }
-
+            onNavigateToProfile = { navigate("profile") },
+            onViewProduct = { productId -> selectedProductId = productId; navigate("product_detail") },
+            onNavigateToPurchases = { navigate("my_purchases") },
+            onNavigateToMyProducts = { navigate("my_products") },
+            onNavigateToDisputes = { navigate("my_disputes") }
         )
-        "my_disputes" -> MyDisputesScreen(token = authToken, onBack = { screen = "marketplace" })
-        "verification" -> VerificationScreen(token = authToken, onBack = { screen = "profile" })
+
+        "product_detail" -> {
+            val id = selectedProductId
+            if (id != null) {
+                ProductDetailScreen(
+                    productId = id,
+                    onBack = { goBack() },
+                    onBuy = { pid -> selectedProductId = pid; navigate("buy_confirm") },
+                    onReportSeller = { sellerId -> selectedSellerId = sellerId; navigate("report_seller") },
+                    onViewTrustProfile = { sellerId -> selectedSellerId = sellerId; navigate("trust_profile") }
+                )
+            }
+        }
+
+        "buy_confirm" -> {
+            val id = selectedProductId
+            if (id != null) {
+                BuyConfirmationScreen(
+                    token = authToken,
+                    productId = id,
+                    onConfirmed = { txnId -> selectedTransactionId = txnId; replaceLastTwoWith("my_purchases") },
+                    onCancel = { goBack() }
+                )
+            }
+        }
+
+        "my_purchases" -> MyPurchasesScreen(
+            token = authToken,
+            onOpenTransaction = { txnId -> selectedTransactionId = txnId; navigate("transaction_detail") }
+        )
+
+        "transaction_detail" -> {
+            val id = selectedTransactionId
+            if (id != null) {
+                TransactionDetailScreen(
+                    token = authToken,
+                    transactionId = id,
+                    onBack = { goBack() },
+                    onRaiseDispute = { txnId -> selectedTransactionId = txnId; navigate("create_dispute") },
+                    onReportSeller = { sellerId -> selectedSellerId = sellerId; navigate("report_seller") },
+                    onViewTrustProfile = { sellerId -> selectedSellerId = sellerId; navigate("trust_profile") }
+                )
+            }
+        }
+
+        "my_products" -> MyProductsScreen(
+            token = authToken,
+            onCreateProduct = { editingProductId = null; navigate("product_form") },
+            onEditProduct = { productId -> editingProductId = productId; navigate("product_form") }
+        )
+
+        "product_form" -> ProductFormScreen(
+            token = authToken,
+            productId = editingProductId,
+            onSaved = { goBack() },
+            onCancel = { goBack() }
+        )
+
+        "trust_profile" -> {
+            val id = selectedSellerId
+            if (id != null) {
+                TrustProfileScreen(
+                    sellerId = id,
+                    onBack = { goBack() },
+                    onReportSeller = { navigate("report_seller") }
+                )
+            }
+        }
+
         "report_seller" -> {
             val id = selectedSellerId
             if (id != null) {
                 ReportSellerScreen(
                     token = authToken,
                     sellerId = id,
-                    onSubmitted = { screen = "trust_profile" },
-                    onCancel = { screen = "trust_profile" }
+                    onSubmitted = { goBack() },
+                    onCancel = { goBack() }
                 )
             }
         }
+
         "create_dispute" -> {
             val id = selectedTransactionId
             if (id != null) {
                 CreateDisputeScreen(
                     token = authToken,
                     transactionId = id,
-                    onSubmitted = { screen = "marketplace" },
-                    onCancel = { screen = "marketplace" }
+                    onSubmitted = { replaceLastTwoWith("my_disputes") },
+                    onCancel = { goBack() }
                 )
             }
         }
-        "trust_profile" -> {
-            val id = selectedSellerId
-            if (id != null) {
-                TrustProfileScreen(
-                    sellerId = id,
-                    onBack = { screen = "marketplace" },
-                    onReportSeller = { screen = "report_seller" }
-                )
-            }
-        }
+
+        "my_disputes" -> MyDisputesScreen(token = authToken, onBack = { goBack() })
+
+        "verification" -> VerificationScreen(token = authToken, onBack = { goBack() })
     }
 }

@@ -9,9 +9,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
-import com.trustmarket.app.network.DisputeRequest
+import com.trustmarket.app.network.DisputeCreateRequest
 import com.trustmarket.app.network.RetrofitClient
 import kotlinx.coroutines.launch
+import com.trustmarket.app.network.friendlyErrorMessage
 
 private val TrustTeal = Color(0xFF1F4E5F)
 
@@ -64,12 +65,12 @@ fun CreateDisputeScreen(token: String?, transactionId: Int, onSubmitted: () -> U
                     scope.launch {
                         try {
                             RetrofitClient.api.createDispute(
-                                "Bearer $token",
-                                DisputeRequest(transaction_id = transactionId, reason = reason)
+                                DisputeCreateRequest(transaction_id = transactionId, reason = reason, description = ""),
+                                "Bearer $token"
                             )
                             onSubmitted()
                         } catch (e: Exception) {
-                            error = "Submission failed: ${e.message}"
+                            error = friendlyErrorMessage(e)
                         } finally {
                             loading = false
                         }

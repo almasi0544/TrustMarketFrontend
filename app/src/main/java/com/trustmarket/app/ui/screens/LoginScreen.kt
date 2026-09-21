@@ -16,6 +16,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.trustmarket.app.network.RetrofitClient
 import kotlinx.coroutines.launch
+import com.trustmarket.app.network.friendlyErrorMessage
 
 private val TrustTeal = Color(0xFF1F4E5F)
 
@@ -64,7 +65,7 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit, onGoToRegister: () -> Unit) {
                             val response = RetrofitClient.api.login(email, password)
                             onLoginSuccess(response.access_token)
                         } catch (e: Exception) {
-                            error = "Login failed: ${e.message}"
+                            error = friendlyErrorMessage(e)
                         } finally {
                             loading = false
                         }

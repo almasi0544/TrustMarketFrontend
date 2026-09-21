@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.trustmarket.app.network.RetrofitClient
 import com.trustmarket.app.network.TrustProfileOut
 import com.trustmarket.app.ui.components.riskColor
+import com.trustmarket.app.network.friendlyErrorMessage
 
 private val TrustTeal = Color(0xFF1F4E5F)
 
@@ -29,7 +30,7 @@ fun TrustProfileScreen(sellerId: Int, onBack: () -> Unit, onReportSeller: () -> 
         try {
             trust = RetrofitClient.api.getSellerTrust(sellerId)
         } catch (e: Exception) {
-            error = "Failed to load trust profile: ${e.message}"
+            error = friendlyErrorMessage(e)
         } finally {
             loading = false
         }

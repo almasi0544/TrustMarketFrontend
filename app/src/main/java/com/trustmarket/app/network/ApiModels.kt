@@ -1,5 +1,9 @@
 package com.trustmarket.app.network
 
+// ==========================================
+// User & Auth Models
+// ==========================================
+
 data class RegisterRequest(
     val email: String,
     val password: String
@@ -10,28 +14,124 @@ data class LoginRequest(
     val password: String
 )
 
-data class UserOut(
-    val id: Int,
-    val email: String
-)
-
 data class TokenResponse(
     val access_token: String,
     val token_type: String
 )
 
+data class UserOut(
+    val id: Int,
+    val email: String,
+    val full_name: String? = null,
+    val is_active: Boolean = true,
+    val created_at: String? = null
+)
+
+data class ProfileOut(
+    val user_id: Int,
+    val full_name: String? = null,
+    val username: String? = null,
+    val bio: String? = null,
+    val location: String? = null,
+    val profile_image: String? = null
+)
+
+data class ProfileUpdateRequest(
+    val full_name: String? = null,
+    val username: String? = null,
+    val bio: String? = null,
+    val location: String? = null
+)
+
+// ==========================================
+// Product Models
+// ==========================================
+
+data class CategoryOut(
+    val id: Int,
+    val name: String,
+    val description: String? = null
+)
+
 data class ProductOut(
     val id: Int,
+    val title: String,
+    val description: String? = null,
+    val price: Double,
+    val category_id: Int? = null,
     val seller_id: Int,
-    val category_id: Int,
+    val condition: String? = null,
+    val status: String? = null,
+    val is_active: Boolean = true,
+    val created_at: String? = null
+)
+
+data class ProductCreateRequest(
     val title: String,
     val description: String?,
     val price: Double,
     val condition: String,
-    val status: String
+    val category_id: Int
 )
 
-data class CategoryOut(val id: Int, val name: String, val description: String?)
+// ==========================================
+// Transaction Models
+// ==========================================
+
+data class TransactionCreateRequest(
+    val product_id: Int
+)
+
+data class TransactionOut(
+    val id: Int,
+    val buyer_id: Int,
+    val seller_id: Int,
+    val product_id: Int,
+    val amount: Double,
+    val status: String,
+    val created_at: String,
+    val completed_at: String?
+
+)
+
+// ==========================================
+// Dispute & Report Models
+// ==========================================
+
+data class DisputeRequest(
+    val transaction_id: Int,
+    val reason: String
+)
+
+data class DisputeCreateRequest(
+    val transaction_id: Int,
+    val reason: String,
+    val description: String
+)
+
+data class DisputeOut(
+    val id: Int,
+    val transaction_id: Int,
+    val reporter_id: Int? = null,
+    val raised_by_id: Int? = null,
+    val reason: String,
+    val description: String? = null,
+    val status: String,
+    val resolution_notes: String? = null,
+    val created_at: String,
+    val resolved_at: String? = null
+)
+
+data class ReportRequest(
+    val seller_id: Int,
+    val transaction_id: Int? = null,
+    val category: String,
+    val description: String? = null
+)
+
+// ==========================================
+// Trust, Verification & Stats Models
+// ==========================================
 
 data class TrustProfileOut(
     val seller_id: Int,
@@ -49,46 +149,52 @@ data class TrustProfileOut(
     val risk_level: String
 )
 
-data class ProfileOut(
-    val user_id: Int,
-    val full_name: String?,
-    val username: String?,
-    val bio: String?,
-    val location: String?,
-    val profile_image: String?
-)
-
-data class ProfileUpdateRequest(
-    val full_name: String? = null,
-    val username: String? = null,
-    val bio: String? = null,
-    val location: String? = null
-)
-
-data class ReportRequest(
-    val seller_id: Int,
-    val transaction_id: Int? = null,
-    val category: String,
-    val description: String? = null
-)
-
-data class DisputeRequest(
-    val transaction_id: Int,
-    val reason: String
-)
-
-data class DisputeOut(
-    val id: Int,
-    val transaction_id: Int,
-    val raised_by_id: Int,
-    val reason: String,
-    val status: String,
-    val resolution_notes: String?,
-    val created_at: String,
-    val resolved_at: String?
-)
-
 data class VerificationOut(
     val user_id: Int,
     val level: String
 )
+
+data class VerificationStatusOut(
+    val level: String,
+    val email_verified: Boolean,
+    val phone_verified: Boolean,
+    val identity_verified: Boolean,
+    val business_verified: Boolean
+)
+
+data class SellerStatsOut(
+    val seller_id: Int,
+    val email: String,
+    val total_products: Int,
+    val active_products: Int
+)
+
+// ==========================================
+// Review Models
+// ==========================================
+
+data class ReviewCreateRequest(
+    val transaction_id: Int,
+    val rating: Int,
+    val comment: String
+)
+
+data class ReviewOut(
+    val id: Int,
+    val transaction_id: Int,
+    val reviewer_id: Int,
+    val seller_id: Int,
+    val rating: Int,
+    val comment: String,
+    val created_at: String
+)
+
+data class ProductUpdateRequest(
+    val title: String? = null,
+    val description: String? = null,
+    val price: Double? = null,
+    val condition: String? = null,
+    val category_id: Int? = null
+)
+
+data class MessageResponse(val detail: String)
