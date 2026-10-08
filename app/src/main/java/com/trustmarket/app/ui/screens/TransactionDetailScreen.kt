@@ -10,13 +10,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.trustmarket.app.network.ProductOut
-import com.trustmarket.app.network.RetrofitClient
-import com.trustmarket.app.network.TransactionOut
-import com.trustmarket.app.network.CategoryOut
-import kotlinx.coroutines.launch
-import com.trustmarket.app.network.friendlyErrorMessage
+import com.trustmarket.app.network.*
 import com.trustmarket.app.util.formatPrice
+import kotlinx.coroutines.launch
 
 private val TrustTeal = Color(0xFF1F4E5F)
 
@@ -31,10 +27,14 @@ fun TransactionDetailScreen(
 ) {
     var txn by remember { mutableStateOf<TransactionOut?>(null) }
     var product by remember { mutableStateOf<ProductOut?>(null) }
-    var categories by remember { mutableStateOf<List<CategoryOut>>(emptyList()) }
+    var myUserId by remember { mutableStateOf<Int?>(null) }
     var loading by remember { mutableStateOf(true) }
     var completing by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var showShippingForm by remember { mutableStateOf(false) }
+    var trackingRef by remember { mutableStateOf("") }
+    var deliveryDate by remember { mutableStateOf("") }
+    var savingShipping by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(transactionId, token) {
@@ -43,7 +43,7 @@ fun TransactionDetailScreen(
             val t = RetrofitClient.api.getTransaction("Bearer $token", transactionId)
             txn = t
             product = RetrofitClient.api.getProduct(t.product_id)
-            categories = RetrofitClient.api.getCategories()
+            myUserId = RetrofitClient.api.getCurrentUser("Bearer $token").id
         } catch (e: Exception) {
             error = friendlyErrorMessage(e)
         } finally {
@@ -61,69 +61,133 @@ fun TransactionDetailScreen(
 
         when {
             loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            error != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(error!!, color = MaterialTheme.colorScheme.error) }
-            txn != null -> Column(modifier = Modifier.padding(24.dp)) {
+            error != null && txn == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(error!!, color = MaterialTheme.colorScheme.error) }
+            txn != null -> {
                 val t = txn!!
-                Card(shape = RoundedCornerShape(12.dp)) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(product?.title ?: "Product #${t.product_id}", fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(4.dp))
-                        Text(formatPrice(t.amount), color = TrustTeal, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(8.dp))
-                        product?.let { p ->
-                            val catName = categories.find { it.id == p.category_id }?.name ?: "General"
-                            DetailRow("Condition", p.condition?.replace("_", " ") ?: "unknown")
-                            DetailRow("Category", catName)
-                            DetailRow("Seller ID", "#${t.seller_id}")
+                val isSeller = myUserId == t.seller_id
+
+                Column(modifier = Modifier.padding(24.dp)) {
+                    Card(shape = RoundedCornerShape(12.dp)) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(product?.title ?: "Product #${t.product_id}", fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(4.dp))
+                            Text(formatPrice(t.amount), color = TrustTeal, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(8.dp))
+                            Text("Status: ${t.status.uppercase()}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                         }
-                        Spacer(Modifier.height(8.dp))
-                        Text("Status: ${t.status.uppercase()}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                        Text("Created: ${t.created_at}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                        t.completed_at?.let { Text("Completed: $it", style = MaterialTheme.typography.bodySmall, color = Color.Gray) }
                     }
-                }
 
-                Spacer(Modifier.height(16.dp))
-                OutlinedButton(onClick = { onViewTrustProfile(t.seller_id) }, modifier = Modifier.fillMaxWidth()) {
-                    Text("View Seller Trust Profile")
-                }
+                    Spacer(Modifier.height(16.dp))
+                    Card(shape = RoundedCornerShape(12.dp)) {
+                        Column {
+                            DetailRow("Item price", formatPrice(t.amount - t.buyer_protection_fee - t.shipping_cost))
+                            DetailRow("Buyer protection fee", formatPrice(t.buyer_protection_fee))
+                            DetailRow("Shipping", formatPrice(t.shipping_cost))
+                            DetailRow("Payment method", t.payment_method.replace("_", " ").replaceFirstChar { it.uppercase() })
+                            t.tracking_reference?.let { DetailRow("Tracking reference", it) }
+                            t.expected_delivery_date?.let { DetailRow("Expected delivery", it) }
+                        }
+                    }
 
-                if (error != null) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(error!!, color = MaterialTheme.colorScheme.error)
-                }
+                    Spacer(Modifier.height(16.dp))
+                    OutlinedButton(onClick = { onViewTrustProfile(t.seller_id) }, modifier = Modifier.fillMaxWidth()) {
+                        Text("View Seller Trust Profile")
+                    }
 
-                Spacer(Modifier.height(20.dp))
-                if (t.status == "pending") {
-                    Button(
-                        onClick = {
-                            if (token == null) return@Button
-                            completing = true
-                            scope.launch {
-                                try {
-                                    txn = RetrofitClient.api.completeTransaction(t.id, "Bearer $token")
-                                } catch (e: Exception) {
-                                    error = friendlyErrorMessage(e)
-                                } finally {
-                                    completing = false
+                    if (error != null) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(error!!, color = MaterialTheme.colorScheme.error)
+                    }
+
+                    Spacer(Modifier.height(20.dp))
+
+                    if (isSeller && t.tracking_reference == null) {
+                        if (!showShippingForm) {
+                            Button(
+                                onClick = { showShippingForm = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = TrustTeal),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Add Shipping Info")
+                            }
+                        } else {
+                            Card(shape = RoundedCornerShape(12.dp)) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    OutlinedTextField(
+                                        value = trackingRef,
+                                        onValueChange = { trackingRef = it },
+                                        label = { Text("Tracking reference") },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                    Spacer(Modifier.height(10.dp))
+                                    OutlinedTextField(
+                                        value = deliveryDate,
+                                        onValueChange = { deliveryDate = it },
+                                        label = { Text("Expected delivery (YYYY-MM-DD)") },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                    Spacer(Modifier.height(12.dp))
+                                    Button(
+                                        onClick = {
+                                            if (token == null) return@Button
+                                            savingShipping = true
+                                            scope.launch {
+                                                try {
+                                                    txn = RetrofitClient.api.updateShipping(
+                                                        "Bearer $token", t.id,
+                                                        ShippingUpdateRequest(trackingRef, deliveryDate)
+                                                    )
+                                                    showShippingForm = false
+                                                } catch (e: Exception) {
+                                                    error = friendlyErrorMessage(e)
+                                                } finally {
+                                                    savingShipping = false
+                                                }
+                                            }
+                                        },
+                                        enabled = !savingShipping,
+                                        colors = ButtonDefaults.buttonColors(containerColor = TrustTeal),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(if (savingShipping) "Saving..." else "Save & Mark Shipped")
+                                    }
                                 }
                             }
-                        },
-                        enabled = !completing,
-                        colors = ButtonDefaults.buttonColors(containerColor = TrustTeal),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(if (completing) "..." else "Mark as Received / Complete")
+                        }
+                        Spacer(Modifier.height(12.dp))
                     }
-                    Spacer(Modifier.height(12.dp))
-                }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedButton(onClick = { onRaiseDispute(t.id) }, modifier = Modifier.weight(1f)) {
-                        Text("Raise Dispute")
+                    if (t.status == "pending" && !isSeller) {
+                        Button(
+                            onClick = {
+                                if (token == null) return@Button
+                                completing = true
+                                scope.launch {
+                                    try {
+                                        txn = RetrofitClient.api.completeTransaction(t.id, "Bearer $token")
+                                    } catch (e: Exception) {
+                                        error = friendlyErrorMessage(e)
+                                    } finally {
+                                        completing = false
+                                    }
+                                }
+                            },
+                            enabled = !completing,
+                            colors = ButtonDefaults.buttonColors(containerColor = TrustTeal),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(if (completing) "..." else "Mark as Received / Complete")
+                        }
+                        Spacer(Modifier.height(12.dp))
                     }
-                    OutlinedButton(onClick = { onReportSeller(t.seller_id) }, modifier = Modifier.weight(1f)) {
-                        Text("Report Problem")
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedButton(onClick = { onRaiseDispute(t.id) }, modifier = Modifier.weight(1f)) {
+                            Text("Raise Dispute")
+                        }
+                        OutlinedButton(onClick = { onReportSeller(t.seller_id) }, modifier = Modifier.weight(1f)) {
+                            Text("Report Problem")
+                        }
                     }
                 }
             }
@@ -134,7 +198,7 @@ fun TransactionDetailScreen(
 @Composable
 private fun DetailRow(label: String, value: String) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(label, color = Color.Gray, style = MaterialTheme.typography.bodySmall)

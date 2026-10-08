@@ -43,10 +43,20 @@ fun AppRoot() {
 
     when (screen) {
         "home" -> TrustMarketHome(onGetStarted = { navigate("login") })
-
         "login" -> LoginScreen(
             onLoginSuccess = { token -> authToken = token; resetTo("marketplace") },
-            onGoToRegister = { navigate("register") }
+            onGoToRegister = { navigate("register") },
+            onForgotPassword = { navigate("forgot_password") }
+        )
+
+        "forgot_password" -> ForgotPasswordScreen(
+            onCodeSent = { navigate("reset_password") },
+            onCancel = { goBack() }
+        )
+
+        "reset_password" -> ResetPasswordScreen(
+            onResetSuccess = { resetTo("login") },
+            onCancel = { goBack() }
         )
 
         "register" -> RegisterScreen(
@@ -93,8 +103,38 @@ fun AppRoot() {
                 BuyConfirmationScreen(
                     token = authToken,
                     productId = id,
-                    onConfirmed = { txnId -> selectedTransactionId = txnId; replaceLastTwoWith("my_purchases") },
+                    onConfirmed = { txnId, paymentMethod ->
+                        selectedTransactionId = txnId
+                        if (paymentMethod == "mobile_money") {
+                            replaceLastTwoWith("mobile_money_payment")
+                        } else {
+                            replaceLastTwoWith("my_purchases")
+                        }
+                    },
                     onCancel = { goBack() }
+                )
+            }
+        }
+
+        "mobile_money_payment" -> {
+            val id = selectedTransactionId
+            if (id != null) {
+                MobileMoneyPaymentScreen(
+                    token = authToken,
+                    transactionId = id,
+                    onInitiated = { navigate("payment_pending") },
+                    onCancel = { resetTo("marketplace") }
+                )
+            }
+        }
+
+        "payment_pending" -> {
+            val id = selectedTransactionId
+            if (id != null) {
+                PaymentPendingScreen(
+                    token = authToken,
+                    transactionId = id,
+                    onDone = { resetTo("marketplace"); navigate("transaction_detail") }
                 )
             }
         }

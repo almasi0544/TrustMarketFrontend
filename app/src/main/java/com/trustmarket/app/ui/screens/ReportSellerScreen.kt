@@ -4,17 +4,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import com.trustmarket.app.network.ReportRequest
 import com.trustmarket.app.network.RetrofitClient
-import kotlinx.coroutines.launch
 import com.trustmarket.app.network.friendlyErrorMessage
+import com.trustmarket.app.ui.components.MediaPickerField
+import kotlinx.coroutines.launch
 
 private val TrustTeal = Color(0xFF1F4E5F)
 
@@ -29,6 +28,8 @@ fun ReportSellerScreen(token: String?, sellerId: Int, onSubmitted: () -> Unit, o
     var category by remember { mutableStateOf(CATEGORIES.first()) }
     var expanded by remember { mutableStateOf(false) }
     var description by remember { mutableStateOf("") }
+    var evidenceUrl by remember { mutableStateOf<String?>(null) }
+    var evidenceType by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -82,21 +83,13 @@ fun ReportSellerScreen(token: String?, sellerId: Int, onSubmitted: () -> Unit, o
             )
 
             Spacer(Modifier.height(16.dp))
-            Text("Evidence (optional)", style = MaterialTheme.typography.labelLarge)
+            Text("Evidence (required)", style = MaterialTheme.typography.labelLarge)
             Spacer(Modifier.height(4.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.Transparent)
-                    .border(2.dp, Color(0xFFE4E8EB), RoundedCornerShape(12.dp))
-                    .padding(20.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("📎", style = MaterialTheme.typography.headlineSmall)
-                    Text("Tap to attach screenshots or documents", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
-                }
-            }
+            MediaPickerField(
+                token = token,
+                onUploaded = { url, type -> evidenceUrl = url; evidenceType = type; error = null },
+                onError = { msg -> error = msg }
+            )
 
             Spacer(Modifier.height(20.dp))
             if (error != null) {
@@ -107,12 +100,28 @@ fun ReportSellerScreen(token: String?, sellerId: Int, onSubmitted: () -> Unit, o
             Button(
                 onClick = {
                     if (token == null) return@Button
+                    val eUrl = evidenceUrl
+                    val eType = evidenceType
+                    if (description.isBlank()) {
+                        error = "Please describe what happened"
+                        return@Button
+                    }
+                    if (eUrl == null || eType == null) {
+                        error = "Evidence (a screenshot or video) is required"
+                        return@Button
+                    }
                     loading = true
                     error = null
                     scope.launch {
                         try {
                             RetrofitClient.api.reportSeller(
-                                ReportRequest(seller_id = sellerId, category = category, description = description),
+                                ReportRequest(
+                                    seller_id = sellerId,
+                                    category = category,
+                                    description = description,
+                                    evidence_url = eUrl,
+                                    evidence_type = eType
+                                ),
                                 "Bearer $token"
                             )
                             onSubmitted()

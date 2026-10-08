@@ -136,7 +136,8 @@ fun CreateProductScreen(
                                 description = description.ifBlank { null },
                                 price = priceVal,
                                 category_id = catId,
-                                condition = condition
+                                condition = condition,
+                                shipping_cost = 0.0
                             )
                         )
                         onProductCreated()

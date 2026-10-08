@@ -1,5 +1,6 @@
 package com.trustmarket.app.network
 
+import okhttp3.MultipartBody
 import retrofit2.http.*
 
 interface ApiService {
@@ -165,4 +166,33 @@ interface ApiService {
 
     @GET("api/v1/auth/me")
     suspend fun getCurrentUser(@Header("Authorization") token: String): UserOut
+
+    @POST("api/v1/auth/forgot-password")
+    suspend fun forgotPassword(@Body request: ForgotPasswordRequest): MessageResponse
+
+    @POST("api/v1/auth/reset-password")
+    suspend fun resetPassword(@Body request: ResetPasswordRequest): MessageResponse
+
+    @POST("api/v1/transactions/{id}/shipping")
+    suspend fun updateShipping(@Header("Authorization") token: String, @Path("id") id: Int, @Body request: ShippingUpdateRequest): TransactionOut
+
+    @POST("api/v1/transactions/{id}/pay/mobile-money")
+    suspend fun payMobileMoney(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int,
+        @Body request: MobileMoneyPaymentRequest
+    ): MobileMoneyPaymentResponse
+
+    @GET("api/v1/transactions/{id}/payment-status")
+    suspend fun getPaymentStatus(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int
+    ): PaymentStatusOut
+
+    @Multipart
+    @POST("api/v1/uploads")
+    suspend fun uploadMedia(
+        @Header("Authorization") token: String,
+        @Part file: MultipartBody.Part
+    ): UploadResponse
 }

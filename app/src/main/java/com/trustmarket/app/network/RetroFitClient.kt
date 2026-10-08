@@ -7,7 +7,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    private const val BASE_URL = "http://10.203.185.16:8000/"
+    private const val BASE_URL = "https://trustmarket.cc/"
 
     val authInterceptor = AuthInterceptor()
 

@@ -1,5 +1,13 @@
 package com.trustmarket.app.ui.screens
 
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.dp
+import com.trustmarket.data.model.ReportResponse
+import com.trustmarket.app.ui.components.MediaDisplay
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -146,3 +154,53 @@ private fun EvidenceItem(label: String, value: String, good: Boolean) {
         )
     }
 }
+
+@Composable
+fun ReportItem(report: ReportResponse) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Reason: ${report.reason}",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = report.description ?: "No details provided.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            if (!report.evidenceUrl.isNull_or_empty()) {
+                Spacer(modifier = Modifier.width(12.dp))
+                MediaDisplay(
+                    mediaUrl = report.evidenceUrl,
+                    mediaType = report.evidenceType,
+                    contentDescription = "Report evidence",
+                    modifier = Modifier.size(64.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun TrustProfileReportList(reports: List<ReportResponse>) {
+    LazyColumn(contentPadding = PaddingValues(16.dp)) {
+        items(reports) { report ->
+            ReportItem(report = report)
+        }
+    }
+}
+
+private fun String?.isNull_or_empty(): Boolean = this == null || this.isEmpty()

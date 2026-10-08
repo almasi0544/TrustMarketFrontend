@@ -12,8 +12,9 @@ import com.trustmarket.app.network.CategoryOut
 import com.trustmarket.app.network.ProductCreateRequest
 import com.trustmarket.app.network.ProductUpdateRequest
 import com.trustmarket.app.network.RetrofitClient
-import kotlinx.coroutines.launch
 import com.trustmarket.app.network.friendlyErrorMessage
+import com.trustmarket.app.ui.components.MediaPickerField
+import kotlinx.coroutines.launch
 
 private val TrustTeal = Color(0xFF1F4E5F)
 private val CONDITIONS = listOf("new", "used", "refurbished")
@@ -24,11 +25,14 @@ fun ProductFormScreen(token: String?, productId: Int?, onSaved: () -> Unit, onCa
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var price by remember { mutableStateOf("") }
+    var shippingCost by remember { mutableStateOf("0") }
     var condition by remember { mutableStateOf(CONDITIONS.first()) }
     var conditionExpanded by remember { mutableStateOf(false) }
     var categories by remember { mutableStateOf<List<CategoryOut>>(emptyList()) }
     var selectedCategoryId by remember { mutableStateOf<Int?>(null) }
     var categoryExpanded by remember { mutableStateOf(false) }
+    var mediaUrl by remember { mutableStateOf<String?>(null) }
+    var mediaType by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
     var saving by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -43,8 +47,11 @@ fun ProductFormScreen(token: String?, productId: Int?, onSaved: () -> Unit, onCa
                 title = p.title
                 description = p.description ?: ""
                 price = p.price.toString()
+                shippingCost = p.shipping_cost.toString()
                 condition = p.condition ?: CONDITIONS.first()
                 selectedCategoryId = p.category_id
+                mediaUrl = p.media_url
+                mediaType = p.media_type
             } else if (categories.isNotEmpty()) {
                 selectedCategoryId = categories.first().id
             }
@@ -69,6 +76,8 @@ fun ProductFormScreen(token: String?, productId: Int?, onSaved: () -> Unit, onCa
             OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Title") }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(value = price, onValueChange = { price = it }, label = { Text("Price") }, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(12.dp))
+            OutlinedTextField(value = shippingCost, onValueChange = { shippingCost = it }, label = { Text("Shipping cost") }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(12.dp))
 
             Text("Condition", style = MaterialTheme.typography.labelLarge)
@@ -112,6 +121,15 @@ fun ProductFormScreen(token: String?, productId: Int?, onSaved: () -> Unit, onCa
                 modifier = Modifier.fillMaxWidth().height(120.dp)
             )
 
+            Spacer(Modifier.height(16.dp))
+            Text("Photo or video", style = MaterialTheme.typography.labelLarge)
+            Spacer(Modifier.height(4.dp))
+            MediaPickerField(
+                token = token,
+                onUploaded = { url, type -> mediaUrl = url; mediaType = type; error = null },
+                onError = { msg -> error = msg }
+            )
+
             Spacer(Modifier.height(20.dp))
             if (error != null) {
                 Text(error!!, color = MaterialTheme.colorScheme.error)
@@ -124,9 +142,16 @@ fun ProductFormScreen(token: String?, productId: Int?, onSaved: () -> Unit, onCa
                     onClick = {
                         if (token == null) return@Button
                         val priceValue = price.toDoubleOrNull()
+                        val shippingValue = shippingCost.toDoubleOrNull() ?: 0.0
                         val catId = selectedCategoryId
+                        val mUrl = mediaUrl
+                        val mType = mediaType
                         if (priceValue == null || catId == null || title.isBlank()) {
                             error = "Please fill in title, a valid price, and category"
+                            return@Button
+                        }
+                        if (mUrl == null || mType == null) {
+                            error = "A photo or video is required"
                             return@Button
                         }
                         saving = true
@@ -136,12 +161,30 @@ fun ProductFormScreen(token: String?, productId: Int?, onSaved: () -> Unit, onCa
                                 if (isEdit) {
                                     RetrofitClient.api.updateProduct(
                                         productId!!,
-                                        ProductUpdateRequest(title, description, priceValue, condition, catId),
+                                        ProductUpdateRequest(
+                                            title = title,
+                                            description = description,
+                                            price = priceValue,
+                                            condition = condition,
+                                            category_id = catId,
+                                            shipping_cost = shippingValue,
+                                            media_url = mUrl,
+                                            media_type = mType
+                                        ),
                                         "Bearer $token"
                                     )
                                 } else {
                                     RetrofitClient.api.createProduct(
-                                        ProductCreateRequest(title, description, priceValue, condition, catId),
+                                        ProductCreateRequest(
+                                            title = title,
+                                            description = description,
+                                            price = priceValue,
+                                            condition = condition,
+                                            category_id = catId,
+                                            media_url = mUrl,
+                                            media_type = mType,
+                                            shipping_cost = shippingValue
+                                        ),
                                         "Bearer $token"
                                     )
                                 }

@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.trustmarket.app.ui.components.MediaDisplay
 import com.trustmarket.app.network.CategoryOut
 import com.trustmarket.app.network.ProductOut
 import com.trustmarket.app.network.RetrofitClient
@@ -23,8 +24,66 @@ import androidx.compose.foundation.clickable
 import com.trustmarket.app.network.friendlyErrorMessage
 import com.trustmarket.app.util.daysAgo
 import com.trustmarket.app.util.formatPrice
+import com.trustmarket.data.model.ProductResponse
 
 private val TrustTeal = Color(0xFF1F4E5F)
+
+@Composable
+fun ProductDetailScreen(
+    product: ProductResponse,
+    onBuyClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+    ) {
+        // Hero Media Component
+        MediaDisplay(
+            mediaUrl = product.mediaUrl,
+            mediaType = product.mediaType,
+            contentDescription = product.title,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(280.dp)
+        )
+
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = product.title,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "$${product.price}",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Description",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = product.description ?: "No description provided.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(
+                onClick = onBuyClick,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Buy Now")
+            }
+        }
+    }
+}
 
 @Composable
 fun ProductDetailScreen(

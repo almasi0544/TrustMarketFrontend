@@ -63,24 +63,31 @@ data class ProductOut(
     val condition: String? = null,
     val status: String? = null,
     val is_active: Boolean = true,
-    val created_at: String? = null
+    val created_at: String? = null,
+    val shipping_cost: Double,
+    val media_url: String? = null,
+    val media_type: String? = null
 )
-
 data class ProductCreateRequest(
     val title: String,
     val description: String?,
     val price: Double,
     val condition: String,
-    val category_id: Int
+    val category_id: Int,
+    val media_url: String? = null,
+    val media_type: String? = null,
+    val shipping_cost: Double = 0.0
 )
 
 // ==========================================
 // Transaction Models
 // ==========================================
+data class TransactionCreateRequest(val product_id: Int, val payment_method: String)
 
-data class TransactionCreateRequest(
-    val product_id: Int
-)
+data class ShippingUpdateRequest(val tracking_reference: String, val expected_delivery_date: String)
+
+data class ForgotPasswordRequest(val email: String)
+data class ResetPasswordRequest(val token: String, val new_password: String)
 
 data class TransactionOut(
     val id: Int,
@@ -88,10 +95,14 @@ data class TransactionOut(
     val seller_id: Int,
     val product_id: Int,
     val amount: Double,
+    val payment_method: String,
+    val buyer_protection_fee: Double,
+    val shipping_cost: Double,
+    val tracking_reference: String?,
+    val expected_delivery_date: String?,
     val status: String,
     val created_at: String,
     val completed_at: String?
-
 )
 
 // ==========================================
@@ -126,7 +137,9 @@ data class ReportRequest(
     val seller_id: Int,
     val transaction_id: Int? = null,
     val category: String,
-    val description: String? = null
+    val description: String? = null,
+    val evidence_url: String,
+    val evidence_type: String
 )
 
 // ==========================================
@@ -194,7 +207,25 @@ data class ProductUpdateRequest(
     val description: String? = null,
     val price: Double? = null,
     val condition: String? = null,
-    val category_id: Int? = null
+    val category_id: Int? = null,
+    val shipping_cost: Double? = null,
+    val media_url: String? = null,
+    val media_type: String? = null
 )
 
 data class MessageResponse(val detail: String)
+
+data class MobileMoneyPaymentRequest(val phone_number: String)
+
+data class MobileMoneyPaymentResponse(
+    val detail: String,
+    val provider_response: Map<String, Any>? = null
+)
+
+data class PaymentStatusOut(
+    val payment_status: String?,
+    val zenopay_order_id: String?
+)
+
+
+data class UploadResponse(val media_url: String, val media_type: String)

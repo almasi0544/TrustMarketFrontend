@@ -17,11 +17,12 @@ import androidx.compose.ui.unit.dp
 import com.trustmarket.app.network.RetrofitClient
 import kotlinx.coroutines.launch
 import com.trustmarket.app.network.friendlyErrorMessage
+import androidx.compose.foundation.clickable
 
 private val TrustTeal = Color(0xFF1F4E5F)
 
 @Composable
-fun LoginScreen(onLoginSuccess: (String) -> Unit, onGoToRegister: () -> Unit) {
+fun LoginScreen(onLoginSuccess: (String) -> Unit, onGoToRegister: () -> Unit, onForgotPassword: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
@@ -48,7 +49,7 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit, onGoToRegister: () -> Unit) {
             OutlinedTextField(value = password, onValueChange = { password = it }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
 
             Spacer(Modifier.height(8.dp))
-            Text("Forgot password?", color = TrustTeal, modifier = Modifier.align(Alignment.End))
+            Text("Forgot password?", color = TrustTeal, modifier = Modifier.align(Alignment.End).clickable(onClick = onForgotPassword))
 
             Spacer(Modifier.height(16.dp))
             if (error != null) {
